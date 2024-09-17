@@ -20,8 +20,10 @@ module tt_um_example (
      else
        counter <= counter + 8'b1;
 
-   assign uo_out = counter;
+   assign uo_out   = counter;
+   assign uio_oe   = 8'b0;
+   assign uio_out  = 8'b0;
    
-  wire _unused = &{ena, ui_in, uio_in, uio_out, uio_oe, 1'b0};
+  wire _unused = &{ena, ui_in, uio_in, uio_out, 1'b0};
 
 endmodule
