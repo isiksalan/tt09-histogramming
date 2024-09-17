@@ -9,12 +9,12 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-This is a simple counter that counts from 0 to 255
+This is a simple counter that counts from 0 to 255.
 
 ## How to test
 
-You give it a clock and it runs, and you can watch the output bits
+You give it a clock and it runs, and you can watch the output bits.
 
 ## External hardware
 
-No external hardware requirements
+No external hardware requirements.
