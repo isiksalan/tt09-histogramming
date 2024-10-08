@@ -41,6 +41,6 @@ module tt_um_led_cipher (
    assign uio_oe  = 7'b0;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, ui_in[7:6], 1'b0};
+  wire _unused = &{ena, ui_in[7:6], uio_in[7:0], 1'b0};
 
 endmodule
