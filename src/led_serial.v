@@ -127,124 +127,124 @@ module led_serial
       logic_fmul4 = logic_fmul2(logic_fmul2(d));
    endfunction // sbox
    
-   always @(posedge clk, posedge reset)
-     if (reset)
+   always @(posedge clk, negedge reset)
+     if (reset == 1'b0)
        begin
-	  ctlstate <= STATE_IDLE;
-	  key      <= 128'h0;
-	  state    <= 64'h0;
-	  rc       <= 6'h1;
-	  bcount   <= 4'h0;
-	  rcount   <= 4'h0;
-	  scount   <= 4'h0;	  
+		  ctlstate <= STATE_IDLE;
+		  key      <= 128'h0;
+		  state    <= 64'h0;
+		  rc       <= 6'h1;
+		  bcount   <= 4'h0;
+		  rcount   <= 4'h0;
+		  scount   <= 4'h0;	  
        end
      else
        begin
-	  ctlstate <= ctlstate_next;
-	  key      <= key_next;
-	  state    <= state_next;
-	  rc       <= rc_next;
-	  bcount   <= bcount_next;
-	  rcount   <= rcount_next;
-	  scount   <= scount_next;	  
+		  ctlstate <= ctlstate_next;
+		  key      <= key_next;
+		  state    <= state_next;
+		  rc       <= rc_next;
+		  bcount   <= bcount_next;
+		  rcount   <= rcount_next;
+		  scount   <= scount_next;	  
        end
    
    // control logic
    always @(*)
      begin
-	
-	// default
-	bcount_next   = bcount;
-	rcount_next   = rcount;
-	scount_next   = scount;
-	ctlstate_next = ctlstate;
-	cmd           = CMD_HOLD;
-	
-	case (ctlstate)
-	  STATE_IDLE:
-	    begin
-	       cmd = loadkey ? CMD_LOADKEY :
-		     loadpt      ? CMD_LOADPT :
-		     getct       ? CMD_GETCT :
-		     CMD_IDLE;
-	       bcount_next = 4'h0;
-	       rcount_next = 4'h0;
-	       scount_next = 4'h0;
-	       ctlstate_next = start ? STATE_INIT : STATE_IDLE;	       
-	    end
-	  STATE_INIT:
-	    begin
-	       cmd = CMD_ADDKEY;
-	       
-	       bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
-	       ctlstate_next = (bcount == 4'hf) ? STATE_ROUND : STATE_INIT;	       
-	    end
-	  STATE_ROUND:
-	    begin
-	       cmd = CMD_SBOX;
-	       
-	       bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
-	       ctlstate_next = (bcount == 4'hf) ? STATE_SHIFTROW : STATE_ROUND;	       
-	    end
-	  STATE_SHIFTROW:
-	    begin
-	       cmd = CMD_SHIFTROW;
-	       
-	       ctlstate_next = STATE_MIXCOL0;	       
-	    end
-	  STATE_MIXCOL0:
-	    begin
-	       cmd = CMD_MIXCOLCOMPUTE;
-	       
-	       ctlstate_next = STATE_MIXCOL1;	       
-	    end
-	  STATE_MIXCOL1:
-	    begin
-	       cmd = CMD_MIXCOLCOMPUTE;
-	       
-	       ctlstate_next = STATE_MIXCOL2;	       
-	    end
-	  STATE_MIXCOL2:
-	    begin
-	       cmd = CMD_MIXCOLCOMPUTE;
-	       
-	       ctlstate_next = STATE_MIXCOL3;	       
-	    end
-	  STATE_MIXCOL3:
-	    begin
-	       cmd = CMD_MIXCOLCOMPUTE;
-	       
-	       ctlstate_next = STATE_MIXCOL4;	       
-	    end
-	  STATE_MIXCOL4:
-	    begin
-	       cmd = CMD_MIXCOLROTATE;
-	       
-	       bcount_next = (bcount == 4'h3) ? 4'h0 : (bcount + 1);
-	       ctlstate_next = (bcount == 4'h3) ? STATE_NEXTROUND : STATE_MIXCOL0;
-	    end
-	  STATE_NEXTROUND:
-	    begin
-	       rcount_next = (rcount == 4'h3) ? 4'h0 : (rcount + 1);
-	       ctlstate_next = (rcount == 4'h3) ? STATE_ADDKEY : STATE_ROUND;
-	    end
-	  STATE_ADDKEY:
-	    begin
-	       cmd = CMD_ADDKEY;
-	       
-	       bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
-	       ctlstate_next = (bcount == 4'hf) ? STATE_NEXTSTEP : STATE_ADDKEY;
-	    end
-	  STATE_NEXTSTEP:
-	    begin
-	       scount_next = (scount == 4'hb) ? 4'h0 : (scount + 1);
-	       ctlstate_next = (scount == 4'hb) ? STATE_IDLE : STATE_ROUND;	       
-	    end
-	  default:
-	    begin
-	       ctlstate_next = STATE_IDLE;
-	    end
-	endcase // case (state)
+		
+		// default
+		bcount_next   = bcount;
+		rcount_next   = rcount;
+		scount_next   = scount;
+		ctlstate_next = ctlstate;
+		cmd           = CMD_HOLD;
+		
+		case (ctlstate)
+		  STATE_IDLE:
+			begin
+			   cmd = loadkey ? CMD_LOADKEY :
+					 loadpt      ? CMD_LOADPT :
+					 getct       ? CMD_GETCT :
+					 CMD_IDLE;
+			   bcount_next = 4'h0;
+			   rcount_next = 4'h0;
+			   scount_next = 4'h0;
+			   ctlstate_next = start ? STATE_INIT : STATE_IDLE;	       
+			end
+		  STATE_INIT:
+			begin
+			   cmd = CMD_ADDKEY;
+			   
+			   bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
+			   ctlstate_next = (bcount == 4'hf) ? STATE_ROUND : STATE_INIT;	       
+			end
+		  STATE_ROUND:
+			begin
+			   cmd = CMD_SBOX;
+			   
+			   bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
+			   ctlstate_next = (bcount == 4'hf) ? STATE_SHIFTROW : STATE_ROUND;	       
+			end
+		  STATE_SHIFTROW:
+			begin
+			   cmd = CMD_SHIFTROW;
+			   
+			   ctlstate_next = STATE_MIXCOL0;	       
+			end
+		  STATE_MIXCOL0:
+			begin
+			   cmd = CMD_MIXCOLCOMPUTE;
+			   
+			   ctlstate_next = STATE_MIXCOL1;	       
+			end
+		  STATE_MIXCOL1:
+			begin
+			   cmd = CMD_MIXCOLCOMPUTE;
+			   
+			   ctlstate_next = STATE_MIXCOL2;	       
+			end
+		  STATE_MIXCOL2:
+			begin
+			   cmd = CMD_MIXCOLCOMPUTE;
+			   
+			   ctlstate_next = STATE_MIXCOL3;	       
+			end
+		  STATE_MIXCOL3:
+			begin
+			   cmd = CMD_MIXCOLCOMPUTE;
+			   
+			   ctlstate_next = STATE_MIXCOL4;	       
+			end
+		  STATE_MIXCOL4:
+			begin
+			   cmd = CMD_MIXCOLROTATE;
+			   
+			   bcount_next = (bcount == 4'h3) ? 4'h0 : (bcount + 1);
+			   ctlstate_next = (bcount == 4'h3) ? STATE_NEXTROUND : STATE_MIXCOL0;
+			end
+		  STATE_NEXTROUND:
+			begin
+			   rcount_next = (rcount == 4'h3) ? 4'h0 : (rcount + 1);
+			   ctlstate_next = (rcount == 4'h3) ? STATE_ADDKEY : STATE_ROUND;
+			end
+		  STATE_ADDKEY:
+			begin
+			   cmd = CMD_ADDKEY;
+			   
+			   bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
+			   ctlstate_next = (bcount == 4'hf) ? STATE_NEXTSTEP : STATE_ADDKEY;
+			end
+		  STATE_NEXTSTEP:
+			begin
+			   scount_next = (scount == 4'hb) ? 4'h0 : (scount + 1);
+			   ctlstate_next = (scount == 4'hb) ? STATE_IDLE : STATE_ROUND;	       
+			end
+		  default:
+			begin
+			   ctlstate_next = STATE_IDLE;
+			end
+		endcase // case (state)
      end
    
    assign done = (ctlstate == STATE_IDLE);
@@ -253,154 +253,154 @@ module led_serial
    // datapath
    always @(*)
      begin
-	// default
-	state_next = state;
-	key_next      = key;
- 	rc_next       = rc;
-	case (cmd)
-	  CMD_IDLE:
-	    begin
-	       rc_next     = 6'h1;
-	    end
-	  CMD_HOLD:
-	    begin
-	    end
-	  CMD_LOADKEY:
-	    begin
-	       key_next   = {key[126:0],keyi};
-	    end
-	  CMD_LOADPT:
-	    begin
-	       state_next = {state_next[62:0],datai};
-	    end
-	  CMD_GETCT:
-	    begin
-	       state_next = {state_next[62:0],1'b0};
-	    end
-	  CMD_ADDKEY:
-	    begin
-	       `staten_next(3,3) = `staten(0,0) ^ `keyn(0,0,0);
-	       `staten_next(3,2) = `staten(3,3);
-	       `staten_next(3,1) = `staten(3,2);
-	       `staten_next(3,0) = `staten(3,1);    
-	       `staten_next(2,3) = `staten(3,0);
-	       `staten_next(2,2) = `staten(2,3);
-	       `staten_next(2,1) = `staten(2,2);
-	       `staten_next(2,0) = `staten(2,1);
-	       `staten_next(1,3) = `staten(2,0);
-	       `staten_next(1,2) = `staten(1,3);
-	       `staten_next(1,1) = `staten(1,2);
-	       `staten_next(1,0) = `staten(1,1);
-	       `staten_next(0,3) = `staten(1,0);
-	       `staten_next(0,2) = `staten(0,3);
-	       `staten_next(0,1) = `staten(0,2);
-	       `staten_next(0,0) = `staten(0,1);
-	       
-	       `keyn_next(0,0,0) = `keyn(0,0,1); 
-	       `keyn_next(0,0,1) = `keyn(0,0,2); 
-	       `keyn_next(0,0,2) = `keyn(0,0,3); 
-	       `keyn_next(0,0,3) = `keyn(0,1,0); 
-	       `keyn_next(0,1,0) = `keyn(0,1,1); 
-	       `keyn_next(0,1,1) = `keyn(0,1,2); 
-	       `keyn_next(0,1,2) = `keyn(0,1,3); 
-	       `keyn_next(0,1,3) = `keyn(0,2,0); 
-	       `keyn_next(0,2,0) = `keyn(0,2,1); 
-	       `keyn_next(0,2,1) = `keyn(0,2,2); 
-	       `keyn_next(0,2,2) = `keyn(0,2,3); 
-	       `keyn_next(0,2,3) = `keyn(0,3,0); 
-	       `keyn_next(0,3,0) = `keyn(0,3,1); 
-	       `keyn_next(0,3,1) = `keyn(0,3,2); 
-	       `keyn_next(0,3,2) = `keyn(0,3,3); 
-	       `keyn_next(0,3,3) = `keyn(1,0,0); 
-	       `keyn_next(1,0,0) = `keyn(1,0,1); 
-	       `keyn_next(1,0,1) = `keyn(1,0,2); 
-	       `keyn_next(1,0,2) = `keyn(1,0,3); 
-	       `keyn_next(1,0,3) = `keyn(1,1,0); 
-	       `keyn_next(1,1,0) = `keyn(1,1,1); 
-	       `keyn_next(1,1,1) = `keyn(1,1,2); 
-	       `keyn_next(1,1,2) = `keyn(1,1,3); 
-	       `keyn_next(1,1,3) = `keyn(1,2,0); 
-	       `keyn_next(1,2,0) = `keyn(1,2,1); 
-	       `keyn_next(1,2,1) = `keyn(1,2,2); 
-	       `keyn_next(1,2,2) = `keyn(1,2,3); 
-	       `keyn_next(1,2,3) = `keyn(1,3,0); 
-	       `keyn_next(1,3,0) = `keyn(1,3,1); 
-	       `keyn_next(1,3,1) = `keyn(1,3,2); 
-	       `keyn_next(1,3,2) = `keyn(1,3,3); 
-	       `keyn_next(1,3,3) = `keyn(0,0,0);
-	    end
-	  CMD_SBOX:
-	    begin
-	       `staten_next(3,3) = logic_round(`staten(0,0), logic_addconst_decode(bcount));
-	       `staten_next(3,2) = `staten(3,3);
-	       `staten_next(3,1) = `staten(3,2);
-	       `staten_next(3,0) = `staten(3,1);    
-	       `staten_next(2,3) = `staten(3,0);
-	       `staten_next(2,2) = `staten(2,3);
-	       `staten_next(2,1) = `staten(2,2);
-	       `staten_next(2,0) = `staten(2,1);
-	       `staten_next(1,3) = `staten(2,0);
-	       `staten_next(1,2) = `staten(1,3);
-	       `staten_next(1,1) = `staten(1,2);
-	       `staten_next(1,0) = `staten(1,1);
-	       `staten_next(0,3) = `staten(1,0);
-	       `staten_next(0,2) = `staten(0,3);
-	       `staten_next(0,1) = `staten(0,2);
-	       `staten_next(0,0) = `staten(0,1);
-	    end
-	  CMD_SHIFTROW:
-	    begin
-	       rc_next = {rc[4:0], (1'b1 ^ rc[4] ^ rc[5])};
-	       `staten_next(0,0) = `staten(0,0);
-	       `staten_next(0,1) = `staten(0,1);
-	       `staten_next(0,2) = `staten(0,2);
-	       `staten_next(0,3) = `staten(0,3);
-	       `staten_next(1,0) = `staten(1,1);
-	       `staten_next(1,1) = `staten(1,2);
-	       `staten_next(1,2) = `staten(1,3);
-	       `staten_next(1,3) = `staten(1,0);
-	       `staten_next(2,0) = `staten(2,2);
-	       `staten_next(2,1) = `staten(2,3);
-	       `staten_next(2,2) = `staten(2,0);
-	       `staten_next(2,3) = `staten(2,1);
-	       `staten_next(3,0) = `staten(3,3);
-	       `staten_next(3,1) = `staten(3,0);
-	       `staten_next(3,2) = `staten(3,1);
-	       `staten_next(3,3) = `staten(3,2);	       
-	    end
-	  CMD_MIXCOLCOMPUTE:
-	    begin
-	       `staten_next(0,0) = `staten(1,0);
-	       `staten_next(1,0) = `staten(2,0);
-	       `staten_next(2,0) = `staten(3,0);
-	       `staten_next(3,0) = logic_fmul4(`staten(0,0)) ^
-				   `staten(1,0) ^
-				   logic_fmul2(`staten(2,0)) ^
-				   logic_fmul2(`staten(3,0));
-	    end
-	  CMD_MIXCOLROTATE:
-	    begin
-	       `staten_next(0,0) = `staten(0,1);
-	       `staten_next(0,1) = `staten(0,2);
-	       `staten_next(0,2) = `staten(0,3);
-	       `staten_next(0,3) = `staten(0,0);
-	       `staten_next(1,0) = `staten(1,1);
-	       `staten_next(1,1) = `staten(1,2);
-	       `staten_next(1,2) = `staten(1,3);
-	       `staten_next(1,3) = `staten(1,0);
-	       `staten_next(2,0) = `staten(2,1);
-	       `staten_next(2,1) = `staten(2,2);
-	       `staten_next(2,2) = `staten(2,3);
-	       `staten_next(2,3) = `staten(2,0);
-	       `staten_next(3,0) = `staten(3,1);
-	       `staten_next(3,1) = `staten(3,2);
-	       `staten_next(3,2) = `staten(3,3);
-	       `staten_next(3,3) = `staten(3,0);
-	    end // case: CMD_MIXCOLROTATE
-	  default:
-	    begin
-	    end	    
-	endcase
+		// default
+		state_next = state;
+		key_next      = key;
+ 		rc_next       = rc;
+		case (cmd)
+		  CMD_IDLE:
+			begin
+			   rc_next     = 6'h1;
+			end
+		  CMD_HOLD:
+			begin
+			end
+		  CMD_LOADKEY:
+			begin
+			   key_next   = {key[126:0],keyi};
+			end
+		  CMD_LOADPT:
+			begin
+			   state_next = {state_next[62:0],datai};
+			end
+		  CMD_GETCT:
+			begin
+			   state_next = {state_next[62:0],1'b0};
+			end
+		  CMD_ADDKEY:
+			begin
+			   `staten_next(3,3) = `staten(0,0) ^ `keyn(0,0,0);
+			   `staten_next(3,2) = `staten(3,3);
+			   `staten_next(3,1) = `staten(3,2);
+			   `staten_next(3,0) = `staten(3,1);    
+			   `staten_next(2,3) = `staten(3,0);
+			   `staten_next(2,2) = `staten(2,3);
+			   `staten_next(2,1) = `staten(2,2);
+			   `staten_next(2,0) = `staten(2,1);
+			   `staten_next(1,3) = `staten(2,0);
+			   `staten_next(1,2) = `staten(1,3);
+			   `staten_next(1,1) = `staten(1,2);
+			   `staten_next(1,0) = `staten(1,1);
+			   `staten_next(0,3) = `staten(1,0);
+			   `staten_next(0,2) = `staten(0,3);
+			   `staten_next(0,1) = `staten(0,2);
+			   `staten_next(0,0) = `staten(0,1);
+			   
+			   `keyn_next(0,0,0) = `keyn(0,0,1); 
+			   `keyn_next(0,0,1) = `keyn(0,0,2); 
+			   `keyn_next(0,0,2) = `keyn(0,0,3); 
+			   `keyn_next(0,0,3) = `keyn(0,1,0); 
+			   `keyn_next(0,1,0) = `keyn(0,1,1); 
+			   `keyn_next(0,1,1) = `keyn(0,1,2); 
+			   `keyn_next(0,1,2) = `keyn(0,1,3); 
+			   `keyn_next(0,1,3) = `keyn(0,2,0); 
+			   `keyn_next(0,2,0) = `keyn(0,2,1); 
+			   `keyn_next(0,2,1) = `keyn(0,2,2); 
+			   `keyn_next(0,2,2) = `keyn(0,2,3); 
+			   `keyn_next(0,2,3) = `keyn(0,3,0); 
+			   `keyn_next(0,3,0) = `keyn(0,3,1); 
+			   `keyn_next(0,3,1) = `keyn(0,3,2); 
+			   `keyn_next(0,3,2) = `keyn(0,3,3); 
+			   `keyn_next(0,3,3) = `keyn(1,0,0); 
+			   `keyn_next(1,0,0) = `keyn(1,0,1); 
+			   `keyn_next(1,0,1) = `keyn(1,0,2); 
+			   `keyn_next(1,0,2) = `keyn(1,0,3); 
+			   `keyn_next(1,0,3) = `keyn(1,1,0); 
+			   `keyn_next(1,1,0) = `keyn(1,1,1); 
+			   `keyn_next(1,1,1) = `keyn(1,1,2); 
+			   `keyn_next(1,1,2) = `keyn(1,1,3); 
+			   `keyn_next(1,1,3) = `keyn(1,2,0); 
+			   `keyn_next(1,2,0) = `keyn(1,2,1); 
+			   `keyn_next(1,2,1) = `keyn(1,2,2); 
+			   `keyn_next(1,2,2) = `keyn(1,2,3); 
+			   `keyn_next(1,2,3) = `keyn(1,3,0); 
+			   `keyn_next(1,3,0) = `keyn(1,3,1); 
+			   `keyn_next(1,3,1) = `keyn(1,3,2); 
+			   `keyn_next(1,3,2) = `keyn(1,3,3); 
+			   `keyn_next(1,3,3) = `keyn(0,0,0);
+			end
+		  CMD_SBOX:
+			begin
+			   `staten_next(3,3) = logic_round(`staten(0,0), logic_addconst_decode(bcount));
+			   `staten_next(3,2) = `staten(3,3);
+			   `staten_next(3,1) = `staten(3,2);
+			   `staten_next(3,0) = `staten(3,1);    
+			   `staten_next(2,3) = `staten(3,0);
+			   `staten_next(2,2) = `staten(2,3);
+			   `staten_next(2,1) = `staten(2,2);
+			   `staten_next(2,0) = `staten(2,1);
+			   `staten_next(1,3) = `staten(2,0);
+			   `staten_next(1,2) = `staten(1,3);
+			   `staten_next(1,1) = `staten(1,2);
+			   `staten_next(1,0) = `staten(1,1);
+			   `staten_next(0,3) = `staten(1,0);
+			   `staten_next(0,2) = `staten(0,3);
+			   `staten_next(0,1) = `staten(0,2);
+			   `staten_next(0,0) = `staten(0,1);
+			end
+		  CMD_SHIFTROW:
+			begin
+			   rc_next = {rc[4:0], (1'b1 ^ rc[4] ^ rc[5])};
+			   `staten_next(0,0) = `staten(0,0);
+			   `staten_next(0,1) = `staten(0,1);
+			   `staten_next(0,2) = `staten(0,2);
+			   `staten_next(0,3) = `staten(0,3);
+			   `staten_next(1,0) = `staten(1,1);
+			   `staten_next(1,1) = `staten(1,2);
+			   `staten_next(1,2) = `staten(1,3);
+			   `staten_next(1,3) = `staten(1,0);
+			   `staten_next(2,0) = `staten(2,2);
+			   `staten_next(2,1) = `staten(2,3);
+			   `staten_next(2,2) = `staten(2,0);
+			   `staten_next(2,3) = `staten(2,1);
+			   `staten_next(3,0) = `staten(3,3);
+			   `staten_next(3,1) = `staten(3,0);
+			   `staten_next(3,2) = `staten(3,1);
+			   `staten_next(3,3) = `staten(3,2);	       
+			end
+		  CMD_MIXCOLCOMPUTE:
+			begin
+			   `staten_next(0,0) = `staten(1,0);
+			   `staten_next(1,0) = `staten(2,0);
+			   `staten_next(2,0) = `staten(3,0);
+			   `staten_next(3,0) = logic_fmul4(`staten(0,0)) ^
+								   `staten(1,0) ^
+								   logic_fmul2(`staten(2,0)) ^
+								   logic_fmul2(`staten(3,0));
+			end
+		  CMD_MIXCOLROTATE:
+			begin
+			   `staten_next(0,0) = `staten(0,1);
+			   `staten_next(0,1) = `staten(0,2);
+			   `staten_next(0,2) = `staten(0,3);
+			   `staten_next(0,3) = `staten(0,0);
+			   `staten_next(1,0) = `staten(1,1);
+			   `staten_next(1,1) = `staten(1,2);
+			   `staten_next(1,2) = `staten(1,3);
+			   `staten_next(1,3) = `staten(1,0);
+			   `staten_next(2,0) = `staten(2,1);
+			   `staten_next(2,1) = `staten(2,2);
+			   `staten_next(2,2) = `staten(2,3);
+			   `staten_next(2,3) = `staten(2,0);
+			   `staten_next(3,0) = `staten(3,1);
+			   `staten_next(3,1) = `staten(3,2);
+			   `staten_next(3,2) = `staten(3,3);
+			   `staten_next(3,3) = `staten(3,0);
+			end // case: CMD_MIXCOLROTATE
+		  default:
+			begin
+			end	    
+		endcase
      end
-
+   
 endmodule
