@@ -8,18 +8,17 @@
 `define staten_next(i,j) state_next[`k2(i,j)+3:`k2(i,j)]
 
 module led_serial
-   (
-    clk,	
+   (clk,	
     reset,
     keyi,	
     datai,	
     dataq,
     start,
-	loadkey,
-	loadpt,
-	getct,
+    loadkey,
+    loadpt,
+    getct,
     done);
-
+   
    input  clk;
    input  reset;
    
@@ -131,23 +130,23 @@ module led_serial
    always @(posedge clk, posedge reset)
      if (reset)
        begin
-		  ctlstate <= STATE_IDLE;
-		  key      <= 128'h0;
-		  state    <= 64'h0;
-		  rc       <= 6'h1;
-		  bcount   <= 4'h0;
-		  rcount   <= 4'h0;
-		  scount   <= 4'h0;	  
+	  ctlstate <= STATE_IDLE;
+	  key      <= 128'h0;
+	  state    <= 64'h0;
+	  rc       <= 6'h1;
+	  bcount   <= 4'h0;
+	  rcount   <= 4'h0;
+	  scount   <= 4'h0;	  
        end
      else
        begin
-		  ctlstate <= ctlstate_next;
-		  key      <= key_next;
-		  state    <= state_next;
-		  rc       <= rc_next;
-		  bcount   <= bcount_next;
-		  rcount   <= rcount_next;
-		  scount   <= scount_next;	  
+	  ctlstate <= ctlstate_next;
+	  key      <= key_next;
+	  state    <= state_next;
+	  rc       <= rc_next;
+	  bcount   <= bcount_next;
+	  rcount   <= rcount_next;
+	  scount   <= scount_next;	  
        end
    
    // control logic
@@ -183,44 +182,44 @@ module led_serial
 	  STATE_ROUND:
 	    begin
 	       cmd = CMD_SBOX;
-
+	       
 	       bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
 	       ctlstate_next = (bcount == 4'hf) ? STATE_SHIFTROW : STATE_ROUND;	       
 	    end
 	  STATE_SHIFTROW:
 	    begin
 	       cmd = CMD_SHIFTROW;
-
+	       
 	       ctlstate_next = STATE_MIXCOL0;	       
 	    end
 	  STATE_MIXCOL0:
 	    begin
 	       cmd = CMD_MIXCOLCOMPUTE;
-
+	       
 	       ctlstate_next = STATE_MIXCOL1;	       
 	    end
 	  STATE_MIXCOL1:
 	    begin
 	       cmd = CMD_MIXCOLCOMPUTE;
-
+	       
 	       ctlstate_next = STATE_MIXCOL2;	       
 	    end
 	  STATE_MIXCOL2:
 	    begin
 	       cmd = CMD_MIXCOLCOMPUTE;
-
+	       
 	       ctlstate_next = STATE_MIXCOL3;	       
 	    end
 	  STATE_MIXCOL3:
 	    begin
 	       cmd = CMD_MIXCOLCOMPUTE;
-
+	       
 	       ctlstate_next = STATE_MIXCOL4;	       
 	    end
 	  STATE_MIXCOL4:
 	    begin
 	       cmd = CMD_MIXCOLROTATE;
-
+	       
 	       bcount_next = (bcount == 4'h3) ? 4'h0 : (bcount + 1);
 	       ctlstate_next = (bcount == 4'h3) ? STATE_NEXTROUND : STATE_MIXCOL0;
 	    end
@@ -232,7 +231,7 @@ module led_serial
 	  STATE_ADDKEY:
 	    begin
 	       cmd = CMD_ADDKEY;
-
+	       
 	       bcount_next = (bcount == 4'hf) ? 4'h0 : (bcount + 1);
 	       ctlstate_next = (bcount == 4'hf) ? STATE_NEXTSTEP : STATE_ADDKEY;
 	    end
@@ -242,9 +241,9 @@ module led_serial
 	       ctlstate_next = (scount == 4'hb) ? STATE_IDLE : STATE_ROUND;	       
 	    end
 	  default:
-		begin
-	    ctlstate_next = STATE_IDLE;
-		end
+	    begin
+	       ctlstate_next = STATE_IDLE;
+	    end
 	endcase // case (state)
      end
    
@@ -264,8 +263,8 @@ module led_serial
 	       rc_next     = 6'h1;
 	    end
 	  CMD_HOLD:
-		begin
-		end
+	    begin
+	    end
 	  CMD_LOADKEY:
 	    begin
 	       key_next   = {key[126:0],keyi};
