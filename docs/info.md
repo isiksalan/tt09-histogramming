@@ -43,6 +43,10 @@ The results are generation on the output word uo_out.
 | 1               | done     | 1 indicates encryption complete       |
 | 0               | dataq    | Ciphertext output bit                 |
 
+## LIMITATIONS
+
+This design forces the key bits to 0 upon loading, so that the effective key value of the cipher is always hardcoded to 00000000_00000000_00000000_00000000. This disables the use of the design as a cipher, yet it still demonstrates how a nibble-serial architecture can be designed.
+
 ## How to test
 
 This block could be tested with some integration on a Raspberry PI to control ui_in and uo_out.
@@ -55,13 +59,14 @@ The typical sequence of operation is as follows.
 5. Wait until done == 1.
 6. Assert getct and shift out ciphertext bits. Repeat 64 times. De-assert getct.
 
-Here are two sample test vectors. Consult the testbench for additional test vectors.
+Here are twotthree sample test vectors. Consult the testbench for additional test vectors.
 
 | Plaintext           |              Key                           | Ciphertext              |
 |---------------------|--------------------------------------------|-------------------------|
 |  0000000000000000   |  00000000000000000000000000000000          | 3decb2a0850cdba1        |
-|  0123456789abcdef   |  0123456789abcdef0123456789abcdef          | d6b824587f014fc2        |
- 
+|  0123456789abcdef   | 00000000000000000000000000000000           | da261393c73be9ce        |
+|  12153524c0895e81   | 00000000000000000000000000000000           | 29db5fe262572f4e        |
+
 ## External hardware
 
 You will need external hardware to use the block cipher.

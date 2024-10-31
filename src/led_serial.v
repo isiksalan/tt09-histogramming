@@ -267,7 +267,9 @@ module led_serial
 			end
 		  CMD_LOADKEY:
 			begin
-			   key_next   = {key[126:0],keyi};
+			   // key_next   = {key[126:0],keyi};
+			   // LIMITATION - FORCE KEY BIT TO 0 UPON LOADING
+			   key_next   = {key[126:0],1'b0};
 			end
 		  CMD_LOADPT:
 			begin
