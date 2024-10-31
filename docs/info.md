@@ -9,7 +9,7 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-tt09-led-serial is a nibble-serial implementation of the LED block cipher, proposed in 2012 and defined in [The LED Block Cipher](https://eprint.iacr.org/2012/600.pdf) by J. Guo et. al. The cipher encrypts a 64-bit block of plaintext with a 128-bit key into a 64-bit block of ciphertext. The nibble-serial implementation enables a very compact implementation as most of the datapath logic can be reused over each nibble. The downside is that such nibble-serial implementations have a much larger latency. The nibble-serial architecture shown below was presented and analyzed earlier in [Differential Fault Intensity Analysis on PRESENT and LED Block Ciphers](https://link.springer.com/chapter/10.1007/978-3-319-21476-4_12) by N. F. Galathy et. al.
+tt09-led-serial is a nibble-serial implementation of the LED block cipher, proposed in 2012 and defined in [The LED Block Cipher](https://eprint.iacr.org/2012/600.pdf) by J. Guo et. al. The cipher encrypts a 64-bit block of plaintext with a 128-bit key into a 64-bit block of ciphertext. The nibble-serial implementation enables a very compact implementation as most of the datapath logic can be reused over each nibble. The downside is that such nibble-serial implementations have a much larger latency. The nibble-serial architecture shown below was presented and analyzed earlier in [Differential Fault Intensity Analysis on PRESENT and LED Block Ciphers](https://dl.acm.org/doi/10.1007/978-3-319-21476-4_12) by N. F. Galathy et. al.
 
 ![image](lednibble.png)
 
