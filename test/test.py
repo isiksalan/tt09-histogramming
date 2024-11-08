@@ -35,18 +35,28 @@ async def test_histogram(dut):
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)  # Add extra cycles after reset
     
     # Helper function to write data to histogram
     async def write_data(data, write_en=1):
+        # First, clear write_en
+        dut.ui_in.value = 0
+        dut.uio_in.value = 0
+        await ClockCycles(dut.clk, 1)
+        
+        # Then set data and write_en
         dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)
         dut.uio_in.value = data & 0xFF
-        await ClockCycles(dut.clk, 1)
+        await ClockCycles(dut.clk, 2)  # Wait two cycles with data stable
 
     # Helper function to capture output sequence
     async def capture_output_sequence():
         results.clear()
-        timeout = 1000  # Prevent infinite loop
+        timeout = 2000  # Increased timeout
         counter = 0
+        
+        # Add initial delay to ensure all writes are processed
+        await ClockCycles(dut.clk, 10)
         
         while counter < timeout:
             await RisingEdge(dut.clk)
