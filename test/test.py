@@ -19,7 +19,7 @@ class HistogramResults:
 
 @cocotb.test()
 async def test_histogram(dut):
-    dut._log.info("Start")
+    dut._log.info("Start of histogram test")
     
     results = HistogramResults()
     
@@ -28,52 +28,51 @@ async def test_histogram(dut):
     cocotb.start_soon(clock.start())
     
     # Reset
-    dut._log.info("Reset")
+    dut._log.info("Applying reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 2)  # Add extra cycles after reset
+    await ClockCycles(dut.clk, 2)  # Additional cycles after reset
     
     # Helper function to write data to histogram
     async def write_data(data, write_en=1):
-        # First, clear write_en
-        dut.ui_in.value = 0
-        dut.uio_in.value = 0
+        """ Write data to the histogram module, with optional write enable control. """
+        dut.ui_in.value = 0  # Clear ui_in first to avoid any glitches
         await ClockCycles(dut.clk, 1)
         
-        # Then set data and write_en
-        dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)
-        dut.uio_in.value = data & 0xFF
-        await ClockCycles(dut.clk, 2)  # Wait two cycles with data stable
+        # Set data and write enable
+        dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)  # High bits for ui_in
+        dut.uio_in.value = data & 0xFF                            # Low bits for uio_in
+        await ClockCycles(dut.clk, 2)  # Keep stable for two cycles
 
     # Helper function to capture output sequence
     async def capture_output_sequence():
+        """ Capture and verify the output sequence until last_bin is set or timeout occurs. """
         results.clear()
-        timeout = 2000  # Increased timeout
+        timeout = 2000  # Extended timeout if sequence takes longer
         counter = 0
-        
-        # Add initial delay to ensure all writes are processed
-        await ClockCycles(dut.clk, 10)
+
+        await ClockCycles(dut.clk, 10)  # Initial delay to process writes
         
         while counter < timeout:
             await RisingEdge(dut.clk)
             data_value = dut.uo_out.value.integer
             
-            if dut.uio_out.value.integer & 0x1:  # valid_out is set
+            if dut.uio_out.value.integer & 0x1:  # Check if valid_out is set
                 results.data_out.append(data_value)
                 results.valid_out = True
             
-            if dut.uio_out.value.integer & 0x2:  # last_bin is set
+            if dut.uio_out.value.integer & 0x2:  # Check if last_bin is set
                 results.last_bin = True
-                break
+                break  # Stop capture once last_bin is detected
                 
             counter += 1
-            
+        
         return results.data_out
-    
+
     # Test Case 1: Fill an 8-bit bin (bin 5) until overflow
     dut._log.info("Test Case 1: Filling 8-bit bin 5 until overflow")
     for _ in range(256):  # Should trigger at 255
