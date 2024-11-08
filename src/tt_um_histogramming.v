@@ -16,8 +16,8 @@ module tt_um_histogramming (
     wire [15:0] data_in;
     wire valid_out, last_bin, ready;
     
-    // Map the 16-bit data_in across ui_in and uio_in
-    assign data_in = {ui_in[6:0], uio_in[7:0], 1'b0};
+    // Map the 16-bit data_in across ui_in and uio_in (removed the extra 1'b0)
+    assign data_in = {ui_in[6:0], uio_in};  // Removed the 1'b0
     
     // Connect valid_out and last_bin to uio_out
     assign uio_out = {6'b0, last_bin, valid_out};
