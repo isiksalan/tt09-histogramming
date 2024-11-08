@@ -9,32 +9,37 @@ module tt_um_histogramming (
     input wire        rst_n    // Active-low reset
 );
 
-    // Assign your inputs and outputs
-    wire reset = ~rst_n;  // Active-high reset for internal use
-    wire write_en = ui_in[0]; // Assign input enable
-    wire [7:0] data_in = {ui_in[7:1]}; // Map 7 bits of ui_in to data_in
-    wire ready;          // Internal ready signal
-    wire valid_out;      // Valid output flag
-    wire last_bin;       // Last bin indicator
+    // Assign reset as active high for internal use
+    wire reset = ~rst_n;
 
-    // Connect outputs
-    assign uo_out[7:0] = {last_bin, valid_out, data_out}; // Map data_out, valid_out, last_bin
-    assign uio_out = 8'b0;     // Unused IO outputs, set to 0
-    assign uio_oe = 8'b0;      // Unused IO output enable, set to 0
+    // Map ui_in to the histogramming module's inputs
+    wire [15:0] data_in = {8'b0, ui_in[7:0]}; // Extend ui_in to 16 bits by padding upper bits
+    wire write_en = ui_in[0]; // Use LSB of ui_in as write enable
 
-    // Instantiate your histogramming module
+    // Output signals
+    wire [7:0] data_out;  // 8-bit data output from the histogramming module
+    wire valid_out;       // Valid output flag
+    wire last_bin;        // Last bin indicator
+    wire ready;           // Ready signal
+
+    // Connect uo_out to represent data_out, valid_out, and last_bin
+    assign uo_out = {last_bin, valid_out, data_out[5:0]}; // Adjusted to use only available bits
+    assign uio_out = 8'b0;     // Set unused IO outputs to 0
+    assign uio_oe = 8'b0;      // Set unused IO output enable to 0
+
+    // Instantiate the histogramming module
     histogramming hist_inst (
         .clk(clk),
         .reset(reset),
         .data_in(data_in),
         .write_en(write_en),
-        .data_out(uo_out[3:0]),   // Map data_out to the lower bits of uo_out
-        .valid_out(uo_out[1]),    // Map valid_out to uo_out[1]
-        .last_bin(uo_out[0]),     // Map last_bin to uo_out[0]
+        .data_out(data_out),
+        .valid_out(valid_out),
+        .last_bin(last_bin),
         .ready(ready)
     );
 
-    // List all unused inputs to prevent warnings
-    wire _unused = &{ena, ui_in[7:6], uio_in[7:0], 1'b0};
+    // Unused input to prevent warnings
+    wire _unused = &{ena, uio_in[7:0]};
 
 endmodule
