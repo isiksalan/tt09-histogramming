@@ -6,39 +6,24 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 from cocotb.triggers import RisingEdge
 
-def hex_to_bits(hex_constant):
-    binary_string = bin(int(hex_constant, 16))[2:]
-    binary_string = binary_string.zfill(len(hex_constant) * 4)
-    for bit in binary_string:
-        yield int(bit)
-
-class ShiftRegister64:
+class HistogramResults:
     def __init__(self):
-        self.register = [0] * 64
-
-    def shift_left(self, new_bit=0):
-        if new_bit not in [0, 1]:
-            raise ValueError("new_bit must be 0 or 1")
-        self.register = self.register[1:] + [new_bit]
-
-    def shift_right(self, new_bit=0):
-        if new_bit not in [0, 1]:
-            raise ValueError("new_bit must be 0 or 1")
-        self.register = [new_bit] + self.register[:-1]
-
-    def get_value(self):
-        return int("".join(map(str, self.register)), 2)
-
-    def __str__(self):
-        return "".join(map(str, self.register))
+        self.data_out = []
+        self.valid_out = False
+        self.last_bin = False
+        
+    def clear(self):
+        self.data_out = []
+        self.valid_out = False
+        self.last_bin = False
 
 @cocotb.test()
-async def test_project(dut):
+async def test_histogram(dut):
     dut._log.info("Start")
-
-    store_result_reg = ShiftRegister64()
-
-    # Set the clock period to 10 us (100 KHz)
+    
+    results = HistogramResults()
+    
+    # Create a 10us period clock (100KHz)
     clock = Clock(dut.clk, 10, units="us")
     cocotb.start_soon(clock.start())
     
@@ -51,143 +36,118 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
     
-    key_vectors = [ "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000",
-                    "00000000000000000000000000000000"
-                    ]
-    plain_vectors = [ "0000000000000000",
-                      "0123456789abcdef",
-                      "12153524c0895e81",
-                      "8484d609b1f05663",
-                      "06b97b0d46df998d",
-                      "b2c2846589375212",
-                      "00f3e30106d7cd0d",
-                      "3b23f1761e8dcd3d",
-                      "76d457ed462df78c",
-                      "7cfde9f9e33724c6",
-                      "e2f784c5d513d2aa",
-                      "72aff7e5bbd27277",
-                      "8932d61247ecdb8f",
-                      "793069f2e77696ce",
-                      "f4007ae8e2ca4ec5",
-                      "2e58495cde8e28bd",
-                      "96ab582db2a72665",
-                      "b1ef62630573870a",
-                      "c03b228010642120",
-                      "557845aacecccc9d",
-                      "cb203e968983b813",
-                      "86bc380da9a7d653"]
-
-    cipher_vectors = ["3decb2a0850cdba1",
-                      "da261393c73be9ce",
-                      "29db5fe262572f4e",
-                      "a58bcbceb726f210",
-                      "19bfe686099fe7fa",
-                      "eb06fdd69c4dddf4",
-                      "7b7ce8a1efea53e7",
-                      "cd9d69d3429b7991",
-                      "f52fac312b2611ba",
-                      "4298653a31c425a0",
-                      "8a3f43d852728672",
-                      "ad8a4dbd629df00f",
-                      "8ddf481dd666cd19",
-                      "1621a0b4c308d2c3",
-                      "0f129144c1f2aa19",
-                      "89816d9688fd485a",
-                      "737817fb01526e1f",
-                      "43721b5b4edde754",
-                      "63e2323b3084a74a",
-                      "9de67e7a1325a1df",
-                      "12b0145845f2da84",
-                      "cbe4f5ec505ad9ee"]
-    
-    start   = 0
-    getct   = 0
-    loadkey = 0
-    loadpt  = 0
-    keyi    = 0
-    datai   = 0
-    dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-    dut._log.info("Test project behavior")
-    await ClockCycles(dut.clk, 1)
-
-    for (key, pt, ct) in zip(key_vectors, plain_vectors, cipher_vectors):
-        await ClockCycles(dut.clk, 2)
-    
-        start   = 0
-        getct   = 0
-        loadkey = 0
-        loadpt  = 0
-        keyi    = 0
-        datai   = 0
-        dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-        await ClockCycles(dut.clk, 2)
-        
-        # load pt
-        for bit in hex_to_bits(pt):
-            loadpt  = 1
-            datai   = bit
-            dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-            await ClockCycles(dut.clk, 1)
-        datai = 0
-        loadpt = 0
-        
-        # load key
-        for bit in hex_to_bits(key):
-            loadkey = 1
-            keyi    = bit
-            dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-            await ClockCycles(dut.clk, 1)
-        keyi = 0
-        loadkey = 0
-
-        dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
+    # Helper function to write data to histogram
+    async def write_data(data, write_en=1):
+        dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)
+        dut.uio_in.value = data & 0xFF
         await ClockCycles(dut.clk, 1)
 
-        # start encryption
-        start = 1
-        dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-        await ClockCycles(dut.clk, 1)
-        start = 0
-        dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-        await ClockCycles(dut.clk, 5)
+    # Helper function to capture output sequence
+    async def capture_output_sequence():
+        results.clear()
+        timeout = 1000  # Prevent infinite loop
+        counter = 0
         
-        # wait for done
-        while (((dut.uo_out.value.integer >> 1) & 1) == 0):
-           await ClockCycles(dut.clk, 1)
-
-        # read ct
-        getct   = 1
-        dut.ui_in.value = ((start<<5) + (getct<<4) + (loadkey<<3) + (loadpt<<2) + (keyi<<1) + datai)
-        for i in range(64):
+        while counter < timeout:
             await RisingEdge(dut.clk)
-            store_result_reg.shift_left(dut.uo_out.value.integer & 1)
+            data_value = dut.uo_out.value.integer
+            
+            if dut.uio_out.value.integer & 0x1:  # valid_out is set
+                results.data_out.append(data_value)
+                results.valid_out = True
+            
+            if dut.uio_out.value.integer & 0x2:  # last_bin is set
+                results.last_bin = True
+                break
                 
-        print("Key ", key)
-        print("PT  ", pt)
-        print("CT  ", ct)
-        print("OUT ", hex(store_result_reg.get_value()))
-        assert(store_result_reg.get_value() == int(ct, 16))
-
-        await ClockCycles(dut.clk, 2)
-
+            counter += 1
+            
+        return results.data_out
     
+    # Test Case 1: Fill an 8-bit bin (bin 5) until overflow
+    dut._log.info("Test Case 1: Filling 8-bit bin 5 until overflow")
+    for _ in range(256):  # Should trigger at 255
+        await write_data(5)
+    
+    output_data = await capture_output_sequence()
+    
+    # Verify bin 5 reached maximum value (255)
+    assert output_data[5] == 255, f"Bin 5 should be 255, got {output_data[5]}"
+    # Verify other 8-bit bins are 0
+    for i in range(10):
+        if i != 5:
+            assert output_data[i] == 0, f"Bin {i} should be 0, got {output_data[i]}"
+    print("Key Test Case 1 - Bin 5:")
+    print(f"Expected: 255")
+    print(f"Got: {output_data[5]}")
+    
+    # Test Case 2: Fill a 4-bit bin (bin 15) until overflow
+    dut._log.info("Test Case 2: Fill 4-bit bin 15 until overflow")
+    for _ in range(16):  # Should trigger at 15
+        await write_data(15)
+    
+    output_data = await capture_output_sequence()
+    
+    # Verify bin 15 reached maximum value (15 for 4-bit)
+    assert output_data[15] == 15, f"Bin 15 should be 15 (4-bit max), got {output_data[15]}"
+    print("Key Test Case 2 - Bin 15:")
+    print(f"Expected: 15")
+    print(f"Got: {output_data[15]}")
+    
+    # Test Case 3: Test boundary between 8-bit and 4-bit regions
+    dut._log.info("Test Case 3: Testing boundary between 8-bit and 4-bit regions")
+    # Write to last 8-bit bin (bin 9)
+    for _ in range(100):
+        await write_data(9)
+    # Write to first 4-bit bin (bin 10)
+    for _ in range(10):
+        await write_data(10)
+    
+    output_data = await capture_output_sequence()
+    
+    # Verify boundary conditions
+    assert output_data[9] == 100, f"Last 8-bit bin should be 100, got {output_data[9]}"
+    assert output_data[10] == 10, f"First 4-bit bin should be 10, got {output_data[10]}"
+    print("Key Test Case 3 - Boundary:")
+    print(f"Expected: Bin 9 = 100, Bin 10 = 10")
+    print(f"Got: Bin 9 = {output_data[9]}, Bin 10 = {output_data[10]}")
+    
+    # Test Case 4: Edge case testing
+    dut._log.info("Test Case 4: Edge case testing")
+    test_values = [
+        (0, 10),   # First bin
+        (9, 10),   # Last 8-bit bin
+        (10, 10),  # First 4-bit bin
+        (63, 10)   # Last bin
+    ]
+    
+    for bin_idx, count in test_values:
+        for _ in range(count):
+            await write_data(bin_idx)
+    
+    output_data = await capture_output_sequence()
+    
+    # Verify all edge cases
+    for bin_idx, expected_count in test_values:
+        assert output_data[bin_idx] == expected_count, \
+            f"Bin {bin_idx} should be {expected_count}, got {output_data[bin_idx]}"
+        print(f"Key Test Case 4 - Bin {bin_idx}:")
+        print(f"Expected: {expected_count}")
+        print(f"Got: {output_data[bin_idx]}")
+    
+    # Test Case 5: Write enable functionality
+    dut._log.info("Test Case 5: Testing write_en functionality")
+    # Get current value of bin 5
+    initial_value = output_data[5]
+    # Try to write with write_en=0
+    await write_data(5, write_en=0)
+    output_data = await capture_output_sequence()
+    # Verify value didn't change
+    assert output_data[5] == initial_value, \
+        f"Bin 5 should not change when write_en=0, expected {initial_value}, got {output_data[5]}"
+    print("Key Test Case 5 - Write Enable:")
+    print(f"Expected: No change ({initial_value})")
+    print(f"Got: {output_data[5]}")
+    
+    await ClockCycles(dut.clk, 100)
+    dut._log.info("All tests completed successfully!")

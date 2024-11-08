@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = led_serial.v tt_um_led_cipher.v
+PROJECT_SOURCES = histogramming.v tt_um_histogramming.v
 
 ifneq ($(GATES),yes)
 
