@@ -60,9 +60,10 @@ module tt_um_histogramming (
             end
         end else if (state == IDLE && write_en && ready_reg) begin
             // Only update bins if bin_index is odd
-            if (bin_index[0] == 1'b1 && bins_4bit[bin_index >> 1] != 4'hF) { // Shift right to half index range
-                bins_4bit[bin_index >> 1] <= bins_4bit[bin_index >> 1] + 1'b1;
+            if (bin_index[0] == 1'b1 && bins_4bit[bin_index >> 1] != 4'hF) begin // Shift right to half index range
+              bins_4bit[bin_index >> 1] <= bins_4bit[bin_index >> 1] + 1'b1;
             end
+
         end
     end
    
