@@ -11,19 +11,12 @@ module tt_um_histogramming (
     
     wire valid_out, last_bin, ready;
     
-    // For bin 15:
-    // ui_in[7] = write_en (1)
-    // ui_in[6:0] = 0000000
-    // uio_in = 00001111 (15)
+    // For bin indexing:
+    // ui_in[7]   = write_en
+    // ui_in[6:0] = data_in[14:8]
+    // uio_in     = data_in[7:0]
     wire [15:0] data_in;
-    assign data_in[15:8] = {1'b0, ui_in[6:0]};  // Upper bits including padding
-    assign data_in[7:0] = uio_in;               // Lower bits for bin index
-    
-    // Debug signals
-    reg [5:0] current_bin;
-    always @(*) begin
-        current_bin = data_in[5:0];  // Extract bin index for debugging
-    end
+    assign data_in = {1'b0, ui_in[6:0], uio_in};
     
     histogramming hist_inst (
         .clk(clk),
@@ -36,7 +29,6 @@ module tt_um_histogramming (
         .ready(ready)
     );
     
-    // Status outputs
     assign uio_out = {6'b0, last_bin, valid_out};
     assign uio_oe = 8'b11;
     

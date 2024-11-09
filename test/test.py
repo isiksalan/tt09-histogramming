@@ -39,54 +39,53 @@ async def test_histogram(dut):
     
     # Helper function to write data to histogram
     async def write_data(data, write_en=1):
-        """ Write data to the histogram module, with optional write enable control. """
-        dut.ui_in.value = 0  # Clear ui_in first to avoid any glitches
+        # Clean previous write first
+        dut.ui_in.value = 0
+        dut.uio_in.value = 0
         await ClockCycles(dut.clk, 1)
         
-        # Set data and write enable
-        dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)  # High bits for ui_in
-        dut.uio_in.value = data & 0xFF                            # Low bits for uio_in
-        await ClockCycles(dut.clk, 2)  # Keep stable for two cycles
+        # Set new data
+        dut.ui_in.value = (write_en << 7) | ((data >> 8) & 0x7F)  # High bits and write_en
+        dut.uio_in.value = data & 0xFF                            # Low bits
+        await ClockCycles(dut.clk, 2)
+        
+        if write_en:  # Clear write_en after data
+            dut.ui_in.value = dut.ui_in.value & 0x7F
+            await ClockCycles(dut.clk, 1)
 
     # Helper function to capture output sequence
     async def capture_output_sequence():
-        """ Capture and verify the output sequence until last_bin is set or timeout occurs. """
         results.clear()
-        timeout = 5000  # Extended timeout if sequence takes longer
+        timeout = 2000  # Extended timeout
         counter = 0
-
-        await ClockCycles(dut.clk, 10)  # Initial delay to process writes
+        
+        await ClockCycles(dut.clk, 10)  # Wait for processing
         
         while counter < timeout:
             await RisingEdge(dut.clk)
             data_value = dut.uo_out.value.integer
             
-            # Check if valid_out is set
-            if dut.uio_out.value.integer & 0x1:
+            if dut.uio_out.value.integer & 0x1:  # valid_out is set
                 results.data_out.append(data_value)
                 results.valid_out = True
             
-            # Check if last_bin is set
-            if dut.uio_out.value.integer & 0x2:
+            if dut.uio_out.value.integer & 0x2:  # last_bin is set
                 results.last_bin = True
-                break  # Stop capture once last_bin is detected
+                break
                 
             counter += 1
         
-        # Print captured data for debugging
-        dut._log.info(f"Captured data sequence: {results.data_out}")
+        dut._log.info(f"Captured sequence: {results.data_out}")
         return results.data_out
-
+    
     # Test Case 1: Fill an 8-bit bin (bin 5) until overflow
     dut._log.info("Test Case 1: Filling 8-bit bin 5 until overflow")
     for _ in range(256):  # Should trigger at 255
         await write_data(5)
     
     output_data = await capture_output_sequence()
+    dut._log.info(f"Test Case 1 output: {output_data}")
     
-    # Debugging statement to see the captured output
-    dut._log.info(f"Output data captured: {output_data}")
-
     # Verify bin 5 reached maximum value (255)
     assert output_data[5] == 255, f"Bin 5 should be 255, got {output_data[5]}"
     # Verify other 8-bit bins are 0
@@ -103,10 +102,8 @@ async def test_histogram(dut):
         await write_data(15)
     
     output_data = await capture_output_sequence()
+    dut._log.info(f"Test Case 2 output: {output_data}")
     
-    # Debugging statement to see the captured output
-    dut._log.info(f"Output data captured: {output_data}")
-
     # Verify bin 15 reached maximum value (15 for 4-bit)
     assert output_data[15] == 15, f"Bin 15 should be 15 (4-bit max), got {output_data[15]}"
     print("Key Test Case 2 - Bin 15:")
@@ -123,10 +120,8 @@ async def test_histogram(dut):
         await write_data(10)
     
     output_data = await capture_output_sequence()
+    dut._log.info(f"Test Case 3 output: {output_data}")
     
-    # Debugging statement to see the captured output
-    dut._log.info(f"Output data captured: {output_data}")
-
     # Verify boundary conditions
     assert output_data[9] == 100, f"Last 8-bit bin should be 100, got {output_data[9]}"
     assert output_data[10] == 10, f"First 4-bit bin should be 10, got {output_data[10]}"
@@ -148,10 +143,8 @@ async def test_histogram(dut):
             await write_data(bin_idx)
     
     output_data = await capture_output_sequence()
+    dut._log.info(f"Test Case 4 output: {output_data}")
     
-    # Debugging statement to see the captured output
-    dut._log.info(f"Output data captured: {output_data}")
-
     # Verify all edge cases
     for bin_idx, expected_count in test_values:
         assert output_data[bin_idx] == expected_count, \
@@ -167,10 +160,8 @@ async def test_histogram(dut):
     # Try to write with write_en=0
     await write_data(5, write_en=0)
     output_data = await capture_output_sequence()
+    dut._log.info(f"Test Case 5 output: {output_data}")
     
-    # Debugging statement to see the captured output
-    dut._log.info(f"Output data captured after write_en=0: {output_data}")
-
     # Verify value didn't change
     assert output_data[5] == initial_value, \
         f"Bin 5 should not change when write_en=0, expected {initial_value}, got {output_data[5]}"
