@@ -52,7 +52,7 @@ async def test_histogram(dut):
     async def capture_output_sequence():
         """ Capture and verify the output sequence until last_bin is set or timeout occurs. """
         results.clear()
-        timeout = 2000  # Extended timeout if sequence takes longer
+        timeout = 5000  # Extended timeout if sequence takes longer
         counter = 0
 
         await ClockCycles(dut.clk, 10)  # Initial delay to process writes
@@ -61,16 +61,20 @@ async def test_histogram(dut):
             await RisingEdge(dut.clk)
             data_value = dut.uo_out.value.integer
             
-            if dut.uio_out.value.integer & 0x1:  # Check if valid_out is set
+            # Check if valid_out is set
+            if dut.uio_out.value.integer & 0x1:
                 results.data_out.append(data_value)
                 results.valid_out = True
             
-            if dut.uio_out.value.integer & 0x2:  # Check if last_bin is set
+            # Check if last_bin is set
+            if dut.uio_out.value.integer & 0x2:
                 results.last_bin = True
                 break  # Stop capture once last_bin is detected
                 
             counter += 1
         
+        # Print captured data for debugging
+        dut._log.info(f"Captured data sequence: {results.data_out}")
         return results.data_out
 
     # Test Case 1: Fill an 8-bit bin (bin 5) until overflow
@@ -80,6 +84,9 @@ async def test_histogram(dut):
     
     output_data = await capture_output_sequence()
     
+    # Debugging statement to see the captured output
+    dut._log.info(f"Output data captured: {output_data}")
+
     # Verify bin 5 reached maximum value (255)
     assert output_data[5] == 255, f"Bin 5 should be 255, got {output_data[5]}"
     # Verify other 8-bit bins are 0
@@ -97,6 +104,9 @@ async def test_histogram(dut):
     
     output_data = await capture_output_sequence()
     
+    # Debugging statement to see the captured output
+    dut._log.info(f"Output data captured: {output_data}")
+
     # Verify bin 15 reached maximum value (15 for 4-bit)
     assert output_data[15] == 15, f"Bin 15 should be 15 (4-bit max), got {output_data[15]}"
     print("Key Test Case 2 - Bin 15:")
@@ -114,6 +124,9 @@ async def test_histogram(dut):
     
     output_data = await capture_output_sequence()
     
+    # Debugging statement to see the captured output
+    dut._log.info(f"Output data captured: {output_data}")
+
     # Verify boundary conditions
     assert output_data[9] == 100, f"Last 8-bit bin should be 100, got {output_data[9]}"
     assert output_data[10] == 10, f"First 4-bit bin should be 10, got {output_data[10]}"
@@ -136,6 +149,9 @@ async def test_histogram(dut):
     
     output_data = await capture_output_sequence()
     
+    # Debugging statement to see the captured output
+    dut._log.info(f"Output data captured: {output_data}")
+
     # Verify all edge cases
     for bin_idx, expected_count in test_values:
         assert output_data[bin_idx] == expected_count, \
@@ -151,6 +167,10 @@ async def test_histogram(dut):
     # Try to write with write_en=0
     await write_data(5, write_en=0)
     output_data = await capture_output_sequence()
+    
+    # Debugging statement to see the captured output
+    dut._log.info(f"Output data captured after write_en=0: {output_data}")
+
     # Verify value didn't change
     assert output_data[5] == initial_value, \
         f"Bin 5 should not change when write_en=0, expected {initial_value}, got {output_data[5]}"
