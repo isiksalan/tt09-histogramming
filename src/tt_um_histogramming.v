@@ -11,28 +11,30 @@ module tt_um_histogramming (
     
     wire valid_out, last_bin, ready;
     
-    // Construct data_in with proper bit alignment
-    // We need all 16 bits because bin 15 needs to be accessible
+    // Properly map 16-bit data_in from ui_in and uio_in
+    // For bin 15 (decimal) test case:
+    // 15 = 0b0000_0000_0000_1111
+    // ui_in[6:0] will contain 0b000_0000 (upper bits)
+    // uio_in will contain 0b0000_1111 (lower bits)
     wire [15:0] data_in;
-    assign data_in = {1'b0, ui_in[6:0], uio_in};  // Ensure proper alignment for bin indexing
+    assign data_in[15:8] = {1'b0, ui_in[6:0]};  // Upper bits from ui_in
+    assign data_in[7:0] = uio_in;               // Lower bits from uio_in
     
     histogramming hist_inst (
         .clk(clk),
         .reset(~rst_n),
-        .data_in(data_in),      // Full 16-bit input
-        .write_en(ui_in[7]),    // Write enable from MSB
-        .data_out(uo_out),      // Direct 8-bit output
-        .valid_out(valid_out),  // Status signals
-        .last_bin(last_bin),
-        .ready(ready)
+        .data_in(data_in),
+        .write_en(ui_in[7]),    // Write enable is MSB of ui_in
+        .data_out(uo_out),      // 8-bit output directly to uo_out
+        .valid_out(valid_out),  // Status bit 0
+        .last_bin(last_bin),    // Status bit 1
+        .ready(ready)           // Not used externally
     );
     
-    // Connect status signals to lower bits of uio_out
-    assign uio_out = {6'b0, last_bin, valid_out};
+    // Status signals to uio_out[1:0]
+    assign uio_out = {6'b0, last_bin, valid_out};  // Map status bits to LSBs
+    assign uio_oe = 8'b11;  // Enable output for status bits
     
-    // Enable output for status bits only
-    assign uio_oe = 8'b11;
-    
-    wire unused = &{ena, ready};
+    wire unused = ena | ready;  // Handle unused signals
 
 endmodule
