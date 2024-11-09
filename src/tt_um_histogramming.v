@@ -11,30 +11,35 @@ module tt_um_histogramming (
     
     wire valid_out, last_bin, ready;
     
-    // Properly map 16-bit data_in from ui_in and uio_in
-    // For bin 15 (decimal) test case:
-    // 15 = 0b0000_0000_0000_1111
-    // ui_in[6:0] will contain 0b000_0000 (upper bits)
-    // uio_in will contain 0b0000_1111 (lower bits)
+    // For bin 15:
+    // ui_in[7] = write_en (1)
+    // ui_in[6:0] = 0000000
+    // uio_in = 00001111 (15)
     wire [15:0] data_in;
-    assign data_in[15:8] = {1'b0, ui_in[6:0]};  // Upper bits from ui_in
-    assign data_in[7:0] = uio_in;               // Lower bits from uio_in
+    assign data_in[15:8] = {1'b0, ui_in[6:0]};  // Upper bits including padding
+    assign data_in[7:0] = uio_in;               // Lower bits for bin index
+    
+    // Debug signals
+    reg [5:0] current_bin;
+    always @(*) begin
+        current_bin = data_in[5:0];  // Extract bin index for debugging
+    end
     
     histogramming hist_inst (
         .clk(clk),
         .reset(~rst_n),
         .data_in(data_in),
-        .write_en(ui_in[7]),    // Write enable is MSB of ui_in
-        .data_out(uo_out),      // 8-bit output directly to uo_out
-        .valid_out(valid_out),  // Status bit 0
-        .last_bin(last_bin),    // Status bit 1
-        .ready(ready)           // Not used externally
+        .write_en(ui_in[7]),
+        .data_out(uo_out),
+        .valid_out(valid_out),
+        .last_bin(last_bin),
+        .ready(ready)
     );
     
-    // Status signals to uio_out[1:0]
-    assign uio_out = {6'b0, last_bin, valid_out};  // Map status bits to LSBs
-    assign uio_oe = 8'b11;  // Enable output for status bits
+    // Status outputs
+    assign uio_out = {6'b0, last_bin, valid_out};
+    assign uio_oe = 8'b11;
     
-    wire unused = ena | ready;  // Handle unused signals
+    wire unused = ena | ready;
 
 endmodule
