@@ -1,7 +1,7 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-/* This testbench instantiates the histogramming module and makes convenient wires
+/* This testbench instantiates the tt_um_histogramming module and makes convenient wires
    that can be driven / tested by the cocotb test.py.
 */
 module tb ();
@@ -30,7 +30,7 @@ module tb ();
 `endif
 
     // Instantiate the histogramming module
-    tt_um_histogramming user_project (
+    tt_um_histogramming tt_um_histogram_inst (
         // Include power ports for the Gate Level test:
 `ifdef GL_TEST
         .VPWR(vpwr),
