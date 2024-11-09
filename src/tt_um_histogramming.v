@@ -11,26 +11,27 @@ module tt_um_histogramming (
     
     wire valid_out, last_bin, ready;
     
-    // Data mapping from test.py:
-    // ui_in[7]   -> write_en
-    // ui_in[6:0] -> data_in[14:8]
-    // uio_in[7:0] -> data_in[7:0]
-    wire [15:0] data_in = {ui_in[6:0], uio_in};
+    // Construct data_in with proper bit alignment
+    // We need all 16 bits because bin 15 needs to be accessible
+    wire [15:0] data_in;
+    assign data_in = {1'b0, ui_in[6:0], uio_in};  // Ensure proper alignment for bin indexing
     
     histogramming hist_inst (
         .clk(clk),
         .reset(~rst_n),
-        .data_in(data_in),
-        .write_en(ui_in[7]),        // Write enable is MSB of ui_in
-        .data_out(uo_out),          // Direct 8-bit output
-        .valid_out(valid_out),
+        .data_in(data_in),      // Full 16-bit input
+        .write_en(ui_in[7]),    // Write enable from MSB
+        .data_out(uo_out),      // Direct 8-bit output
+        .valid_out(valid_out),  // Status signals
         .last_bin(last_bin),
         .ready(ready)
     );
     
-    // Map status signals to lowest two bits of uio_out
+    // Connect status signals to lower bits of uio_out
     assign uio_out = {6'b0, last_bin, valid_out};
-    assign uio_oe = 8'b11;  // Enable output for status bits
+    
+    // Enable output for status bits only
+    assign uio_oe = 8'b11;
     
     wire unused = &{ena, ready};
 
