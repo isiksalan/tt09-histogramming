@@ -8,139 +8,40 @@ module tt_um_histogramming (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-    // Internal registers to store 16-bit input data
-    reg [15:0] data_reg;
-    reg [7:0] data_out_reg;
-    reg valid_out_reg;
-    reg last_bin_reg;
-    reg ready_reg;
     
-    // 10 bins with 8-bit counts
-    reg [7:0] bins_8bit [0:9];   
-    // 54 bins with 4-bit counts
-    reg [3:0] bins_4bit [10:63]; 
+    wire [15:0] data_in;
+    wire write_en;
+    wire [7:0] data_out;
+    wire valid_out;
+    wire last_bin;
+    wire ready;
     
-    // State machine states
-    reg [1:0] state;
-    localparam IDLE = 2'b00;
-    localparam OUTPUT_DATA = 2'b01;
-    localparam RESET_BINS = 2'b10;
+    // Map the 16-bit data_in across ui_in and uio_in
+    assign data_in = {ui_in[6:0], uio_in[7:0], 1'b0};
+    assign write_en = ui_in[7];
     
-    // Counter for outputs
-    reg [5:0] shift_count;
+    // Instantiate the histogramming module
+    histogramming hist_inst (
+        .clk(clk),
+        .reset(~rst_n),
+        .data_in(data_in),
+        .write_en(write_en),
+        .data_out(data_out),
+        .valid_out(valid_out),
+        .last_bin(last_bin),
+        .ready(ready)
+    );
     
-    // Input control signals from ui_in
-    wire write_en = ui_in[7];           // Use MSB as write enable
-    wire load_upper = ui_in[6];         // Load upper byte
-    wire [5:0] bin_index = ui_in[5:0];  // Use lower 6 bits as bin index
+    // Connect outputs
+    assign uo_out = data_out;
     
-    // Bin reset control
-    reg local_bin_reset;
-    wire bin_reset;
-    assign bin_reset = ~rst_n || local_bin_reset;
+    // Connect control signals to uio_out
+    assign uio_out = {5'b0, ready, last_bin, valid_out};
     
-    integer i;
-    
-    // Data input handling
-    always @(posedge clk) begin
-        if (~rst_n) begin
-            data_reg <= 16'h0;
-        end else if (load_upper) begin
-            data_reg[15:8] <= ui_in;
-        end else begin
-            data_reg[7:0] <= ui_in;
-        end
-    end
-    
-    // Bin management logic with separate reset
-    always @(posedge clk or posedge bin_reset) begin
-        if (bin_reset) begin
-            // Reset all bins
-            for (i = 0; i < 10; i = i + 1) begin
-                bins_8bit[i] <= 8'h0;
-            end
-            for (i = 10; i < 64; i = i + 1) begin
-                bins_4bit[i] <= 4'h0;
-            end
-        end
-        else if (state == IDLE && write_en && ready_reg) begin
-            if (bin_index < 10) begin
-                // Update 8-bit bins
-                if (bins_8bit[bin_index] != 8'hFF) begin
-                    bins_8bit[bin_index] <= bins_8bit[bin_index] + 1'b1;
-                end
-            end else begin
-                // Update 4-bit bins
-                if (bins_4bit[bin_index] != 4'hF) begin
-                    bins_4bit[bin_index] <= bins_4bit[bin_index] + 1'b1;
-                end
-            end
-        end
-    end
-    
-    // FSM and output logic
-    always @(posedge clk or negedge rst_n) begin
-        if (~rst_n) begin
-            data_out_reg <= 8'h0;
-            valid_out_reg <= 1'b0;
-            last_bin_reg <= 1'b0;
-            ready_reg <= 1'b1;
-            state <= IDLE;
-            local_bin_reset <= 1'b0;
-            shift_count <= 6'h0;
-        end
-        else begin
-            local_bin_reset <= 1'b0;  // Default value
-            
-            case (state)
-                IDLE: begin
-                    valid_out_reg <= 1'b0;
-                    last_bin_reg <= 1'b0;
-                    shift_count <= 6'h0;
-                    
-                    if (write_en && ready_reg) begin
-                        if ((bin_index < 10 && bins_8bit[bin_index] == 8'hFF) ||
-                            (bin_index >= 10 && bins_4bit[bin_index] == 4'hF)) begin
-                            state <= OUTPUT_DATA;
-                            ready_reg <= 1'b0;
-                        end
-                    end
-                end
-                
-                OUTPUT_DATA: begin
-                    valid_out_reg <= 1'b1;
-                    
-                    if (shift_count < 10) begin
-                        data_out_reg <= bins_8bit[shift_count];
-                    end else begin
-                        data_out_reg <= {4'h0, bins_4bit[shift_count]};
-                    end
-                    
-                    if (shift_count == 63) begin
-                        last_bin_reg <= 1'b1;
-                        state <= RESET_BINS;
-                    end else begin
-                        shift_count <= shift_count + 1'b1;
-                    end
-                end
-                
-                RESET_BINS: begin
-                    local_bin_reset <= 1'b1;
-                    valid_out_reg <= 1'b0;
-                    last_bin_reg <= 1'b0;
-                    ready_reg <= 1'b1;
-                    state <= IDLE;
-                end
-            endcase
-        end
-    end
-    
-    // Output assignments
-    assign uo_out = data_out_reg;
-    assign uio_out = 8'b0;  // Unused
-    assign uio_oe = 8'b0;   // All pins as inputs
+    // Set outputs for control signals
+    assign uio_oe = 8'b00000111;  // Enable output for ready, last_bin, valid_out
     
     // Handle unused inputs
-    wire _unused_ok = &{ena, uio_in};
+    wire _unused_ok = &{ena};
 
 endmodule
