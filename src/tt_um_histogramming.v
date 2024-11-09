@@ -1,3 +1,4 @@
+
 module tt_um_histogramming (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
@@ -15,8 +16,8 @@ module tt_um_histogramming (
     reg last_bin_reg;
     reg ready_reg;
     
-    // 64 bins with 4-bit counts
-    reg [3:0] bins_4bit [0:63]; 
+    // 64 bins with 3-bit counts
+    reg [2:0] bins_3bit [0:63]; 
     
     // State machine states
     reg [1:0] state;
@@ -55,12 +56,12 @@ module tt_um_histogramming (
         if (bin_reset) begin
             // Reset all bins
             for (i = 0; i < 64; i = i + 1) begin
-                bins_4bit[i] <= 4'h0;
+                bins_3bit[i] <= 3'h0;
             end
         end else if (state == IDLE && write_en && ready_reg) begin
-            // Update 4-bit bins
-            if (bins_4bit[bin_index] != 4'hF) begin
-                bins_4bit[bin_index] <= bins_4bit[bin_index] + 1'b1;
+            // Update 3-bit bins
+            if (bins_3bit[bin_index] != 3'h7) begin
+                bins_3bit[bin_index] <= bins_3bit[bin_index] + 1'b1;
             end
         end
     end
@@ -86,7 +87,7 @@ module tt_um_histogramming (
                     shift_count <= 6'h0;
                     
                     if (write_en && ready_reg) begin
-                        if (bins_4bit[bin_index] == 4'hF) begin
+                        if (bins_3bit[bin_index] == 3'h7) begin
                             state <= OUTPUT_DATA;
                             ready_reg <= 1'b0;
                         end
@@ -95,7 +96,7 @@ module tt_um_histogramming (
                 
                 OUTPUT_DATA: begin
                     valid_out_reg <= 1'b1;
-                    data_out_reg <= {4'h0, bins_4bit[shift_count]};
+                    data_out_reg <= {5'h0, bins_3bit[shift_count]};
                     
                     if (shift_count == 63) begin
                         last_bin_reg <= 1'b1;

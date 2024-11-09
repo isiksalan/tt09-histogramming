@@ -1,3 +1,6 @@
+
+    
+    
 # SPDX-FileCopyrightText: © 2024 Tiny Tapeout
 # SPDX-License-Identifier: Apache-2.0
 
@@ -31,15 +34,15 @@ async def test_histogram(dut):
         dut.ui_in.value = bin_value & 0x3F  # Clear write_en
         await ClockCycles(dut.clk, 1)
     
-    # Test Case 1: Write to bin 5 (now 4-bit)
+    # Test Case 1: Write to bin 5
     dut._log.info("Test Case 1: Write to bin 5")
-    for _ in range(10):  # Write less than max (15)
+    for _ in range(8):  # Write less than max (7)
         await write_to_bin(5)
     assert dut.ui_in.value.integer & 0x3F == 5, "Bin index not correct"
     
     # Test Case 2: Test overflow of bin 15
     dut._log.info("Test Case 2: Test overflow")
-    for _ in range(16):  # Should overflow at 15
+    for _ in range(8):  # Should overflow at 7
         await write_to_bin(15)
     await ClockCycles(dut.clk, 10)
     
