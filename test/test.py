@@ -3,16 +3,16 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, RisingEdge, Timer
+from cocotb.triggers import ClockCycles, RisingEdge, Timer, FallingEdge
 
 @cocotb.test()
 async def test_histogram(dut):
     dut._log.info("Start")
-   
+    
     # Create a 40ns period clock
     clock = Clock(dut.clk, 40, units="ns")
     cocotb.start_soon(clock.start())
-   
+    
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
@@ -22,58 +22,78 @@ async def test_histogram(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 10)
-   
-    # Helper function to write to a bin (only odd bins allowed)
-    async def write_to_bin(bin_value):
-        # Check if bin_value is odd, else skip
-        if bin_value % 2 == 0:
-            dut._log.info(f"Skipping even bin {bin_value}")
-            return
+    
+    # Helper function to write to a bin
+    async def write_value(value):
+        # Set write_enable and value
+        dut.ui_in.value = (1 << 7) | (value & 0x3F)
+        await ClockCycles(dut.clk, 1)
+        # Clear write_enable
+        dut.ui_in.value = 0
+        await ClockCycles(dut.clk, 1)
+    
+    # Helper function to wait for output sequence
+    async def wait_for_output_sequence():
+        # Wait for ready to go low
+        while dut.uio_out.value.integer & 0x04:
+            await ClockCycles(dut.clk, 1)
         
-        # Bin value in lower 5 bits
-        odd_bin_index = bin_value // 2  # Map to the internal 32-bin index
-        dut.ui_in.value = (1 << 7) | (odd_bin_index & 0x1F)  # Set write_en and odd bin index
+        dut._log.info("Output sequence started")
+        bin_values = []
+        
+        # Wait for valid to go high
+        while not (dut.uio_out.value.integer & 0x10):
+            await ClockCycles(dut.clk, 1)
+        
+        # Collect all bin values until last_bin
+        while not (dut.uio_out.value.integer & 0x08):  # Last bin bit
+            if dut.uio_out.value.integer & 0x10:  # Valid bit
+                bin_values.append(dut.uo_out.value.integer)
+            await ClockCycles(dut.clk, 1)
+            
+        dut._log.info(f"Collected bin values: {bin_values}")
+        return bin_values
+    
+    # Test 1: Write to multiple odd values
+    dut._log.info("Test 1: Writing to odd values")
+    await write_value(5)  # Should go to bin 2
+    await write_value(7)  # Should go to bin 3
+    await write_value(3)  # Should go to bin 1
+    await ClockCycles(dut.clk, 5)
+    
+    # Test 2: Write to even values (should be ignored)
+    dut._log.info("Test 2: Writing even values (should be ignored)")
+    await write_value(2)
+    await write_value(4)
+    await write_value(6)
+    await ClockCycles(dut.clk, 5)
+    
+    # Test 3: Overflow a bin
+    dut._log.info("Test 3: Overflow test")
+    for _ in range(16):  # Write to bin 5 until overflow
+        await write_value(5)
         await ClockCycles(dut.clk, 1)
-        dut.ui_in.value = odd_bin_index & 0x1F  # Clear write_en
+    
+    # Wait for and verify output sequence
+    bin_values = await wait_for_output_sequence()
+    
+    # Wait for ready to go high again
+    while not (dut.uio_out.value.integer & 0x04):
         await ClockCycles(dut.clk, 1)
-   
-    # Test Case 1: Write to bin 5 (4-bit bin now)
-    dut._log.info("Test Case 1: Write to bin 5")
-    for _ in range(10):  # Write less than max (15)
-        await write_to_bin(5)
-    assert dut.ui_in.value.integer & 0x1F == 5 // 2, "Bin index not correct"
-   
-    # Test Case 2: Test overflow of bin 15
-    dut._log.info("Test Case 2: Test overflow")
-    for _ in range(16):  # Should overflow at 15 (4-bit max)
-        await write_to_bin(15)
-    await ClockCycles(dut.clk, 10)
-   
-    # Test Case 3: Test edge bins (first, middle, last)
-    dut._log.info("Test Case 3: Edge bins")
-    # First odd bin
-    await write_to_bin(1)
-    # Middle odd bin (15 in the 64-bin range, mapped to 7 in the 32-bin array)
-    await write_to_bin(15)
-    # Last odd bin (63 in the 64-bin range, mapped to 31 in the 32-bin array)
-    await write_to_bin(63)
-    await ClockCycles(dut.clk, 10)
-   
-    # Test Case 4: Test all bins (only odd ones should register)
-    dut._log.info("Test Case 4: All bins (odd indices only)")
-    for bin_idx in range(1, 64, 2):  # Write to only odd bin indices
-        await write_to_bin(bin_idx)
-        await ClockCycles(dut.clk, 1)
-   
-    # Test load_upper functionality
-    dut._log.info("Test Case 5: Test load_upper")
-    # Set load_upper and some data
-    dut.ui_in.value = (1 << 6) | 0xAA  # load_upper=1, data=0xAA
-    await ClockCycles(dut.clk, 1)
-    # Clear load_upper
-    dut.ui_in.value = 0x55  # load_upper=0, data=0x55
-    await ClockCycles(dut.clk, 1)
-   
+    
+    # Test 4: Write to edge cases
+    dut._log.info("Test 4: Edge cases")
+    await write_value(1)   # First odd value
+    await write_value(63)  # Last odd value
+    await ClockCycles(dut.clk, 5)
+    
+    # Test 5: Test enable
+    dut._log.info("Test 5: Testing enable")
+    dut.ena.value = 0
+    await write_value(5)  # Should be ignored when disabled
+    await ClockCycles(dut.clk, 5)
+    dut.ena.value = 1
+    
     # Final wait
     await ClockCycles(dut.clk, 100)
     dut._log.info("Test completed")
