@@ -1,6 +1,4 @@
 
-`default_nettype none
-
 module tt_um_histogramming (
     input  wire [7:0] ui_in,     
     output wire [7:0] uo_out,    
@@ -11,23 +9,19 @@ module tt_um_histogramming (
     input  wire       rst_n,     
     input  wire       ena        
 );
-    // 32 bins with 4-bit counts for odd numbers
-    reg [3:0] bins [0:31];
-    
-    // State machine states
+
+    reg [3:0] bins [0:31];    
     reg [1:0] state;
-    localparam IDLE = 2'b00;
-    localparam OUTPUT_DATA = 2'b01;
-    localparam RESET_BINS = 2'b10;
-    
-    // Counter for outputs
     reg [4:0] shift_count;
-    
-    // Internal registers
     reg [7:0] data_out_reg;
     reg valid_out_reg;
     reg last_bin_reg;
     reg ready_reg;
+    
+    // State definitions
+    parameter IDLE = 2'b00;
+    parameter OUTPUT_DATA = 2'b01;
+    parameter RESET_BINS = 2'b10;
     
     // Input processing
     wire [5:0] input_value;
@@ -40,17 +34,18 @@ module tt_um_histogramming (
     assign bin_index = input_value[5:1];
     assign write_en = ui_in[7];
     
-    // Outputs
+    // Output assignments
     assign uo_out = data_out_reg;
     assign uio_out = {3'b0, valid_out_reg, last_bin_reg, ready_reg, 2'b0};
     assign uio_oe = 8'hFF;
     
     integer i;
     
-    // Main logic
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            for (i = 0; i < 32; i = i + 1) bins[i] <= 4'h0;
+            for (i = 0; i < 32; i = i + 1) begin
+                bins[i] <= 4'h0;
+            end
             state <= IDLE;
             shift_count <= 5'h0;
             data_out_reg <= 8'h0;
@@ -90,7 +85,9 @@ module tt_um_histogramming (
                 end
                 
                 RESET_BINS: begin
-                    for (i = 0; i < 32; i = i + 1) bins[i] <= 4'h0;
+                    for (i = 0; i < 32; i = i + 1) begin
+                        bins[i] <= 4'h0;
+                    end
                     valid_out_reg <= 1'b0;
                     last_bin_reg <= 1'b0;
                     ready_reg <= 1'b1;
@@ -98,8 +95,10 @@ module tt_um_histogramming (
                     state <= IDLE;
                 end
                 
-                default: state <= IDLE;
+                default: 
+                    state <= IDLE;
             endcase
         end
     end
+
 endmodule
