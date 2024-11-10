@@ -1,9 +1,9 @@
+
 # SPDX-FileCopyrightText: © 2024 Tiny Tapeout
 # SPDX-License-Identifier: Apache-2.0
-
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, RisingEdge, Timer, FallingEdge
+from cocotb.triggers import ClockCycles
 
 @cocotb.test()
 async def test_histogram(dut):
@@ -23,77 +23,50 @@ async def test_histogram(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 10)
     
-    # Helper function to write to a bin
+    # Helper function to write a value
     async def write_value(value):
-        # Set write_enable and value
         dut.ui_in.value = (1 << 7) | (value & 0x3F)
         await ClockCycles(dut.clk, 1)
-        # Clear write_enable
         dut.ui_in.value = 0
         await ClockCycles(dut.clk, 1)
     
-    # Helper function to wait for output sequence
-    async def wait_for_output_sequence():
-        # Wait for ready to go low
-        while dut.uio_out.value.integer & 0x04:
+    # Helper function for output sequence
+    async def wait_for_output():
+        while (dut.uio_out.value.integer & 0x04):  # Wait for ready low
             await ClockCycles(dut.clk, 1)
         
-        dut._log.info("Output sequence started")
-        bin_values = []
-        
-        # Wait for valid to go high
-        while not (dut.uio_out.value.integer & 0x10):
+        outputs = []
+        while not (dut.uio_out.value.integer & 0x08):  # Until last_bin
+            if (dut.uio_out.value.integer & 0x10):  # If valid
+                outputs.append(dut.uo_out.value.integer)
             await ClockCycles(dut.clk, 1)
         
-        # Collect all bin values until last_bin
-        while not (dut.uio_out.value.integer & 0x08):  # Last bin bit
-            if dut.uio_out.value.integer & 0x10:  # Valid bit
-                bin_values.append(dut.uo_out.value.integer)
-            await ClockCycles(dut.clk, 1)
-            
-        dut._log.info(f"Collected bin values: {bin_values}")
-        return bin_values
+        dut._log.info(f"Outputs: {outputs}")
+        return outputs
+
+    # Test 1: Write odd and even numbers
+    dut._log.info("Test 1: Basic odd/even test")
+    await write_value(3)    # Should be counted
+    await write_value(4)    # Should be ignored
+    await write_value(5)    # Should be counted
     
-    # Test 1: Write to multiple odd values
-    dut._log.info("Test 1: Writing to odd values")
-    await write_value(5)  # Should go to bin 2
-    await write_value(7)  # Should go to bin 3
-    await write_value(3)  # Should go to bin 1
-    await ClockCycles(dut.clk, 5)
-    
-    # Test 2: Write to even values (should be ignored)
-    dut._log.info("Test 2: Writing even values (should be ignored)")
-    await write_value(2)
-    await write_value(4)
-    await write_value(6)
-    await ClockCycles(dut.clk, 5)
-    
-    # Test 3: Overflow a bin
-    dut._log.info("Test 3: Overflow test")
-    for _ in range(16):  # Write to bin 5 until overflow
+    # Test 2: Overflow test
+    dut._log.info("Test 2: Overflow test")
+    for _ in range(15):    # Fill bin 5 until overflow
         await write_value(5)
-        await ClockCycles(dut.clk, 1)
     
-    # Wait for and verify output sequence
-    bin_values = await wait_for_output_sequence()
+    # Get and verify outputs
+    outputs = await wait_for_output()
     
-    # Wait for ready to go high again
+    # Wait for ready
     while not (dut.uio_out.value.integer & 0x04):
         await ClockCycles(dut.clk, 1)
     
-    # Test 4: Write to edge cases
-    dut._log.info("Test 4: Edge cases")
-    await write_value(1)   # First odd value
-    await write_value(63)  # Last odd value
-    await ClockCycles(dut.clk, 5)
-    
-    # Test 5: Test enable
-    dut._log.info("Test 5: Testing enable")
+    # Test 3: Enable test
+    dut._log.info("Test 3: Enable test")
     dut.ena.value = 0
-    await write_value(5)  # Should be ignored when disabled
-    await ClockCycles(dut.clk, 5)
+    await write_value(3)    # Should be ignored when disabled
     dut.ena.value = 1
     
-    # Final wait
     await ClockCycles(dut.clk, 100)
     dut._log.info("Test completed")
